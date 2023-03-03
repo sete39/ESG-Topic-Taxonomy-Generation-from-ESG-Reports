@@ -1,9 +1,10 @@
 # classes to convert JSONLs to Python classes
 import json
-import pandas
+# import pandas as pd
 
 class Block:
-    def __init__(self, page_count: int, block_count: int, size: float, font: str, color: int, bbox: list[float], text: list[str], text_str: str) -> None:
+    def __init__(self, page_count: int, block_count: int, size: float, font: str, color: int,
+                  bbox: list[float], text: list[str], text_str: str) -> None:
         self.page_count = page_count
         self.block_count = block_count
         self.size = size
@@ -40,7 +41,9 @@ class Page:
         return Page(page_count, block_list)
 
 class Report:
-    def __init__(self, pages_list: list[Page], company_name: str, industry: str, sector: str, company_introduction: str, ticker: str, exchange: str, title: str, date: str, author: str) -> None:
+    def __init__(self, pages_list: list[Page], company_name: str, industry: str, sector: str, 
+                 company_introduction: str, ticker: str, exchange: str, title: str, 
+                 date: str, author: str, keywords: str) -> None:
         self.pages_list = pages_list # combined pages list make up a report
         self.company_name = company_name
         self.industry = industry
@@ -51,6 +54,7 @@ class Report:
         self.title = title
         self.date = date # just the year
         self.author = author
+        self.keywords = keywords
         
     def from_summary(summary_dict: dict, report_dict: dict):
         # summary_dict is the whole summary of a company
@@ -66,14 +70,15 @@ class Report:
             exchange=summary_dict['exchange'],
             title=report_dict['title'] or report_dict['metadata']['title'],
             date=report_dict['date'],
-            author=report_dict['metadata']['author']
+            author=report_dict['metadata']['author'],
+            keywords=report_dict['metadata']['keywords']
         )
 
 # reading a JSONL file and converting it to a page list
 def read_normalized_file(normalized_filename: str) -> list[Page]:
     # NOTE: each file represents an ESG report, and each line represents a page. 
-    # In a page, each dict represents a block, which could be a text block or an image block. T
-    # he image is all deleted. Each block tells the size, font, and location, of a text.
+    # In a page, each dict represents a block, which could be a text block or an image block.
+    # The images are all deleted. Each block tells the size, font, and location, of a text.
     with open(f'./normalization_text/{normalized_filename}', encoding="utf8") as json_file:
         json_list = list(json_file)
 
@@ -99,4 +104,5 @@ def get_all_reports() -> list[Report]:
         
         return report_list
 
-def convert_to_dataframe
+def convert_to_dataframe(report_list):
+    pass

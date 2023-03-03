@@ -1,7 +1,8 @@
 taxocom/
 normalization_text/
 raw_text/
-
+nettaxo/
+AutoPhrase/
 ### default python .gitignore
 # Byte-compiled / optimized / DLL files
 __pycache__/
