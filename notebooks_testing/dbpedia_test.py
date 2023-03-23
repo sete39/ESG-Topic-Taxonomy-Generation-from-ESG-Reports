@@ -56,6 +56,7 @@ import pickle
 with (open("./tokenized_dbpedia.pkl", "rb")) as f:
     documents, documents_labels = pickle.load(f)
 
+print('Finished reading tokenized file')
 # %%
 graph_dict = {}
 
@@ -105,6 +106,7 @@ import torchtext
 
 glove = torchtext.vocab.GloVe(name="6B", dim=50)
 
+print('finished gettign GlOVE Embedding file for torchtext')
 # %%
 # Creating "ego-graphs" (each node is seperated into a graph with itself, parent, and siblings)
 # The base node (so the node itself) will be masked, aka. have a [MASK] embedding
@@ -222,6 +224,7 @@ for l1_topic in graph_dict:
 
 graph_list = np.array(graph_list)
 
+print('Finished creating ego-graphs')
 # %%
 from spektral.data import Dataset
 
@@ -617,16 +620,13 @@ out = shared_bilinear([topic_embedding, document_embedding])
 # Outputs
 model = ModelWithNCE(inputs=[X_in, A_in, I_in, input_ids], outputs=[out, out2])
 
-# %%
-from keras.utils.vis_utils import plot_model
-
-plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
 
 # %%
 model.compile(optimizer=optimizer, loss=loss_fn, metrics=['accuracy'], run_eagerly=True)
 # model.summary()
 topic_expan_generator = TopicExpanTrainGen(graph_list, documents, documents_labels, batch_size, mini_batch_size)
 
+print('starting to fit')
 # %%
 from tqdm.keras import TqdmCallback
 
