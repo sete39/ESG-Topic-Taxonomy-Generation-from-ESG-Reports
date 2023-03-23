@@ -13,6 +13,7 @@ preprocessed*
 *.zip
 *.h5
 *.vector_cache
+ogbn_arxiv/
 
 ### default python .gitignore
 # Byte-compiled / optimized / DLL files
