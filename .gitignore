@@ -3,6 +3,17 @@ normalization_text/
 raw_text/
 nettaxo/
 AutoPhrase/
+
+*.pkl
+glove.6B*
+data/
+DBPEDIA_train.csv
+AutoPhrase.txt
+preprocessed*
+*.zip
+*.h5
+*.vector_cache
+
 ### default python .gitignore
 # Byte-compiled / optimized / DLL files
 __pycache__/
