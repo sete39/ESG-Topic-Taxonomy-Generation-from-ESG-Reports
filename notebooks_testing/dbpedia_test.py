@@ -508,10 +508,10 @@ class TopicExpanTrainGen(tf.keras.utils.Sequence):
             mini_batch_similarity_label = [1] + ([0] * (self.mini_batch_size-1))
 
             # shuffling mini batch
-            to_shuffle_list = list(zip(mini_batch_similarity_label, (positive_document + negative_documents), mini_batch_phrase_list))
-            shuffle(to_shuffle_list)
-            mini_batch_similarity_label, mini_batch_document_list, mini_batch_phrase_list = zip(*to_shuffle_list)
-
+            # to_shuffle_list = list(zip(mini_batch_similarity_label, (positive_document + negative_documents), mini_batch_phrase_list))
+            # shuffle(to_shuffle_list)
+            # mini_batch_similarity_label, mini_batch_document_list, mini_batch_phrase_list = zip(*to_shuffle_list)
+            mini_batch_document_list = (positive_document + negative_documents)
             batch_graph_list.append(np.array([positive_graph for _ in range(self.mini_batch_size)]))
             batch_document_list.append(mini_batch_document_list)
             batch_phrase_list.append(mini_batch_phrase_list)
@@ -556,7 +556,6 @@ class TopicExpanTrainGen(tf.keras.utils.Sequence):
     #     shuffle(to_shuffle_list)
     #     self.document_input, self.document_topics = zip(*to_shuffle_list)
     #     return super().on_epoch_end()
-
 # %%
 ################################################################################
 # Build model
