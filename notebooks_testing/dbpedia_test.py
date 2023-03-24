@@ -301,8 +301,9 @@ class Bilinear(tf.keras.layers.Layer):
     """
     # Input of the function must be a list of two tensors.
     vec_1, vec_2 = inputs
-    return tf.einsum(
-        'bk,jkl,bl->bj', vec_1, self._bilinear_weight, vec_2) + self._bias
+    activation = tf.keras.activations.sigmoid
+    return activation(tf.einsum(
+        'bk,jkl,bl->bj', vec_1, self._bilinear_weight, vec_2)) + self._bias
 
   def compute_output_shape(self, input_shape: tf.TensorShape) -> tuple[int]:
     """See tf.keras.layers.Layer."""
@@ -393,7 +394,7 @@ import keras_nlp
 
 learning_rate = 5e-5  # Learning rate
 epochs = 4  # Number of training epochs
-batch_size = 64  # Batch size
+batch_size = 32  # Batch size
 mini_batch_size = 4
 batch_ratio = int(batch_size / mini_batch_size)
 
@@ -423,7 +424,7 @@ class ModelWithNCE(Model):
             phrase_loss = loss_fn(target[1], phrase_prediction)
             total_loss = infoNCE_loss + phrase_loss + sum(self.losses)
 
-            tf.print(total_loss, output_stream=sys.stderr)
+            tf.print(infoNCE_loss, total_loss, output_stream=sys.stderr)
         gradients = tape.gradient(total_loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
         self.compiled_metrics.update_state(target, (similarity_prediction, phrase_prediction))
