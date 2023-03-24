@@ -3,6 +3,7 @@ import pandas as pd
 df = pd.read_csv('../dataset/DBPEDIA_train.csv')
 document_list = df['text'].to_numpy().astype('str')
 document_list.dtype
+print('Finished reading df')
 
 # %%
 # encoding topics to create the adjacency matrix
@@ -55,8 +56,8 @@ import pickle
 
 with (open("./tokenized_dbpedia.pkl", "rb")) as f:
     documents, documents_labels = pickle.load(f)
+print('Finished getting tokenized file')
 
-print('Finished reading tokenized file')
 # %%
 graph_dict = {}
 
@@ -105,8 +106,8 @@ feature_array = x.reshape(298, -1)
 import torchtext
 
 glove = torchtext.vocab.GloVe(name="6B", dim=50)
+print('Finished getting GlOVE embedder')
 
-print('finished gettign GlOVE Embedding file for torchtext')
 # %%
 # Creating "ego-graphs" (each node is seperated into a graph with itself, parent, and siblings)
 # The base node (so the node itself) will be masked, aka. have a [MASK] embedding
@@ -224,7 +225,6 @@ for l1_topic in graph_dict:
 
 graph_list = np.array(graph_list)
 
-print('Finished creating ego-graphs')
 # %%
 from spektral.data import Dataset
 
@@ -376,24 +376,6 @@ class ContextEmbedding(tf.keras.layers.Layer):
         context_embedding = tf.multiply(sequence_embedding, topic_attentive_embedding)
         return context_embedding
 
-def calculate_infoNCE_loss(inputs, temperature: float):
-    # Split the inputs into the anchor and positive samples
-    anchor, positive = tf.split(inputs, 2, axis=0)
-
-    # Concatenate the anchor and positive samples along the batch axis
-    concat = tf.concat([anchor, positive], axis=0)
-
-    # Compute the labels
-    batch_size = tf.shape(concat)[0]
-    labels = tf.range(batch_size)
-    masks = tf.one_hot(labels, batch_size * 2)
-
-    # Compute the loss
-    logits = logits / temperature
-    loss = tf.nn.softmax_cross_entropy_with_logits(labels=masks, logits=logits)
-    loss = tf.reduce_sum(loss)
-
-    return loss
 
 # %%
 from tensorflow import int64
@@ -435,9 +417,9 @@ class ModelWithNCE(Model):
         inputs, target = data
         with tf.GradientTape() as tape:
             similarity_prediction, phrase_prediction = self(inputs, training=True)
-            similarity_prediction_infonce = tf.reshape(similarity_prediction / infoNCE_temprature, shape=(batch_ratio, -1))
+            similarity_prediction_infonce = tf.reshape(similarity_prediction / infoNCE_temprature, shape=(1, -1))
 
-            infoNCE_loss = tf.nn.softmax_cross_entropy_with_logits(labels=tf.reshape(target[0], shape=(batch_ratio, -1)), logits=similarity_prediction_infonce)
+            infoNCE_loss = tf.nn.softmax_cross_entropy_with_logits(labels=tf.reshape(target[0], shape=(1, -1)), logits=similarity_prediction_infonce)
             phrase_loss = loss_fn(target[1], phrase_prediction)
             total_loss = infoNCE_loss + phrase_loss + sum(self.losses)
 
@@ -620,19 +602,18 @@ out = shared_bilinear([topic_embedding, document_embedding])
 # Outputs
 model = ModelWithNCE(inputs=[X_in, A_in, I_in, input_ids], outputs=[out, out2])
 
-
 # %%
 model.compile(optimizer=optimizer, loss=loss_fn, metrics=['accuracy'], run_eagerly=True)
 # model.summary()
 topic_expan_generator = TopicExpanTrainGen(graph_list, documents, documents_labels, batch_size, mini_batch_size)
 
-print('starting to fit')
 # %%
 from tqdm.keras import TqdmCallback
 
 # NOTE: Ignore warning about gradients not existing for BERT's dense layer since 
 # the dense layers are not used and are thus unconnected and do not need training
 
+print('Starting model fitting')
 # TODO: Fix similarity predictor/similarity predictor loss? Getting big negative numbers when training on Google Colab
 # infoNCE loss giving zero for everything
 model.fit(topic_expan_generator, batch_size=batch_size, epochs=epochs, verbose=1, callbacks=[TqdmCallback(verbose=1)])
