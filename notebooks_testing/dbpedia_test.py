@@ -420,7 +420,7 @@ class ModelWithNCE(Model):
             similarity_prediction, phrase_prediction = self(inputs, training=True)
             similarity_prediction_infonce = tf.reshape(similarity_prediction / infoNCE_temprature, shape=(mini_batch_size, -1))
 
-            infoNCE_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=tf.reshape(target, shape=(mini_batch_size, -1)), logits=similarity_prediction_infonce))
+            infoNCE_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=tf.reshape(target[0], shape=(mini_batch_size, -1)), logits=similarity_prediction_infonce))
             phrase_loss = loss_fn(target[1], phrase_prediction)
             total_loss = infoNCE_loss + phrase_loss + sum(self.losses)
 
