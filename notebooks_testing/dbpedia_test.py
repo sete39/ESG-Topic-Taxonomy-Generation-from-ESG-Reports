@@ -208,8 +208,8 @@ def create_ego_graph(l1_topic, l2_topic, l3_topic, graph_dict):
         
         # Masking base node, setting the embedding to all 0's
         if (node == base):
-            embedding_avg = glove['MASK']
-
+            embedding_avg = np.ones(50)
+        # print(embedding_avg)
         ego_features[encoded_nodes_list[i]] = embedding_avg
 
     return Graph(a=adj_matrix, x=ego_features, y=(l1_topic, l2_topic, l3_topic))
@@ -334,7 +334,7 @@ class TopicAttentiveEmbedding(tf.keras.layers.Layer):
 
     def call(self, topic_embedding: tf.Tensor, sequence_embedding: tf.Tensor, shared_bilinear_layer: tf.keras.layers.Layer):
         # topic_embedding shape = (batch_size, topic_embedding_len)
-        # sequence_embedding shape = (batch_size, 32, 768)
+        # sequence_embedding shape = (batch_size, max_len, 768)
 
         reshaped_topic_embedding: tf.Tensor = tf.reshape(topic_embedding, (-1, 1, topic_embedding.shape[1]))
         reshaped_topic_embedding: tf.Tensor = tf.repeat(reshaped_topic_embedding, sequence_embedding.shape[1], axis=1)
@@ -556,6 +556,11 @@ class TopicExpanTrainGen(tf.keras.utils.Sequence):
     #     shuffle(to_shuffle_list)
     #     self.document_input, self.document_topics = zip(*to_shuffle_list)
     #     return super().on_epoch_end()
+
+# %%
+# topic_expan_generator = TopicExpanTrainGen(graph_list, documents, documents_labels, batch_size, mini_batch_size)
+# topic_expan_generator.__getitem__(2)
+
 # %%
 ################################################################################
 # Build model
@@ -601,6 +606,7 @@ out = shared_bilinear([topic_embedding, document_embedding])
 
 # Outputs
 model = ModelWithNCE(inputs=[X_in, A_in, I_in, input_ids], outputs=[out, out2])
+
 
 # %%
 model.compile(optimizer=optimizer, loss=loss_fn, metrics=['accuracy'], run_eagerly=True)
@@ -680,7 +686,7 @@ target = tf.constant([[[0],
 sigmoided = tf.keras.activations.sigmoid(preds)
 
 # %%
-tf.nn.softmax_cross_entropy_with_logits(labels=tf.reshape(target, shape=(2, -1)), logits=tf.reshape(preds, shape=(2, -1)))
+tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=tf.reshape(target, shape=(2, -1)), logits=tf.reshape(sigmoided, shape=(2, -1))))
 
 # %%
 tf.keras.activations.softmax(tf.reshape(preds, shape=(1, -1)))
