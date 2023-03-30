@@ -302,8 +302,8 @@ class Bilinear(tf.keras.layers.Layer):
     # Input of the function must be a list of two tensors.
     vec_1, vec_2 = inputs
     activation = tf.keras.activations.sigmoid
-    return activation(tf.einsum(
-        'bk,jkl,bl->bj', vec_1, self._bilinear_weight, vec_2)) + self._bias
+    return tf.einsum(
+        'bk,jkl,bl->bj', vec_1, self._bilinear_weight, vec_2) + self._biasS
 
   def compute_output_shape(self, input_shape: tf.TensorShape) -> tuple[int]:
     """See tf.keras.layers.Layer."""
@@ -404,9 +404,9 @@ infoNCE_temprature = 0.1
 
 optimizer = Adam(learning_rate)
 loss_fn = SparseCategoricalCrossentropy(from_logits=True)
- 
+loss_fn_binary = tf.keras.losses.BinaryCrossentropy()
 n_out = dataset.n_labels
-topic_embedding_dimension = 50
+topic_embedding_dimension = 300
 del df
 
 # %%
@@ -420,12 +420,13 @@ class ModelWithNCE(Model):
             similarity_prediction, phrase_prediction = self(inputs, training=True)
             similarity_prediction_infonce = tf.reshape(similarity_prediction / infoNCE_temprature, shape=(mini_batch_size, -1))
 
-            infoNCE_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=tf.reshape(target[0], shape=(mini_batch_size, -1)), logits=similarity_prediction_infonce))
+            # infoNCE_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=tf.reshape(target[0], shape=(mini_batch_size, -1)), logits=similarity_prediction_infonce))
+            bce_loss = loss_fn_binary(target[0], similarity_prediction)
             phrase_loss = loss_fn(target[1], phrase_prediction)
-            total_loss = infoNCE_loss + phrase_loss + sum(self.losses)
+            total_loss = bce_loss + phrase_loss + sum(self.losses)
 
-            tf.print(similarity_prediction[:4], infoNCE_loss, total_loss, output_stream=sys.stderr)
-        gradients = tape.gradient(total_loss, self.trainable_variables)
+            # tf.print(similarity_prediction[:4], bce_loss, total_loss, output_stream=sys.stderr)
+        gradients = tape.gradient([bce_loss, phrase_loss], self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
         self.compiled_metrics.update_state(target, (similarity_prediction, phrase_prediction))
         return {m.name: m.result() for m in self.metrics}
@@ -478,22 +479,26 @@ class TopicExpanTrainGen(tf.keras.utils.Sequence):
         return math.ceil(len(self.document_topics) / (self.batch_size / self.mini_batch_size))
 
     def __getitem__(self, non_batch_index: int):
+        # retrieving batch at non_batch_index
         batch_to_mini_batch_ratio = int((self.batch_size / self.mini_batch_size))
         idx = non_batch_index * batch_to_mini_batch_ratio
-        
+
         batch_graph_list = []
         batch_document_list = []
         batch_similarity_label = []
         batch_phrase_list = []
         for mini_batch in range(batch_to_mini_batch_ratio):
-            positive_doc_topic = self.document_topics[idx + mini_batch]
-            positive_document = [self.document_input[idx + mini_batch]]
+            # creating mini_batch / getting the positive document
+            positive_doc_idx = min(idx + mini_batch, len(self.document_topics) - 1)
+            positive_doc_topic = self.document_topics[positive_doc_idx]
+            positive_document = [self.document_input[positive_doc_idx]]
             positive_graph = self._topic_to_graph_dict[positive_doc_topic]
 
             exclude_list = [positive_doc_topic]
             negative_documents = []
             mini_batch_phrase_list = [encoded_topic_to_tokenized_dict[positive_doc_topic]] 
             for _ in range(self.mini_batch_size-1):
+                # creating mini_batch / getting random negative documents for the rest of the minibatch
                 random_negative_topic = np.random.choice(list(set([x for x in self.document_topics_dict.keys()]) - set(exclude_list)))
                 exclude_list.append(random_negative_topic)
 
@@ -508,10 +513,10 @@ class TopicExpanTrainGen(tf.keras.utils.Sequence):
             mini_batch_similarity_label = [1] + ([0] * (self.mini_batch_size-1))
 
             # shuffling mini batch
-            # to_shuffle_list = list(zip(mini_batch_similarity_label, (positive_document + negative_documents), mini_batch_phrase_list))
-            # shuffle(to_shuffle_list)
-            # mini_batch_similarity_label, mini_batch_document_list, mini_batch_phrase_list = zip(*to_shuffle_list)
-            mini_batch_document_list = (positive_document + negative_documents)
+            to_shuffle_list = list(zip(mini_batch_similarity_label, (positive_document + negative_documents), mini_batch_phrase_list))
+            shuffle(to_shuffle_list)
+            mini_batch_similarity_label, mini_batch_document_list, mini_batch_phrase_list = zip(*to_shuffle_list)
+            # mini_batch_document_list = (positive_document + negative_documents)
             batch_graph_list.append(np.array([positive_graph for _ in range(self.mini_batch_size)]))
             batch_document_list.append(mini_batch_document_list)
             batch_phrase_list.append(mini_batch_phrase_list)
@@ -566,6 +571,8 @@ class TopicExpanTrainGen(tf.keras.utils.Sequence):
 # Build model
 ################################################################################
 # shared bilinear layer (used in Similarity Predictor and Phrase Generator)
+# strategy = tf.distribute.MirroredStrategy()
+# with strategy.scope():
 shared_bilinear = Bilinear(topic_embedding_dimension, 768, 1)
 
 # GNNs (Topic Encoder)
@@ -573,9 +580,9 @@ X_in = Input(shape=(dataset.n_node_features))
 A_in = Input(shape=(None,), sparse=True)
 I_in = Input(shape=(), dtype=int64)
 
-X = GCNConv(topic_embedding_dimension, activation='relu')([X_in, A_in])
-X = GCNConv(topic_embedding_dimension, activation='relu')([X, A_in])
-topic_embedding = GlobalAvgPool(name='topic_embedding')([X, I_in])
+topic_embedding = GCNConv(topic_embedding_dimension, activation='relu')([X_in, A_in])
+topic_embedding = GCNConv(topic_embedding_dimension, activation='relu')([topic_embedding, A_in])
+topic_embedding = GlobalAvgPool(name='topic_embedding')([topic_embedding, I_in])
 
 # BERT Embedding (Document Encoder)
 max_seq_length = max_len
@@ -606,15 +613,18 @@ out = shared_bilinear([topic_embedding, document_embedding])
 
 # Outputs
 model = ModelWithNCE(inputs=[X_in, A_in, I_in, input_ids], outputs=[out, out2])
-
+print('model layers:', model.layers[-2])
 
 # %%
 model.compile(optimizer=optimizer, loss=loss_fn, metrics=['accuracy'], run_eagerly=True)
 # model.summary()
-topic_expan_generator = TopicExpanTrainGen(graph_list, documents, documents_labels, batch_size, mini_batch_size)
+topic_expan_generator = TopicExpanTrainGen(graph_list, documents[:-2000], documents_labels[:-2000], batch_size, mini_batch_size)
 
 # %%
 from tqdm.keras import TqdmCallback
+from tensorflow.keras.callbacks import LambdaCallback
+
+print_weights = LambdaCallback(on_batch_end=lambda batch, logs: print(model.layers[1].output))
 
 # NOTE: Ignore warning about gradients not existing for BERT's dense layer since 
 # the dense layers are not used and are thus unconnected and do not need training
@@ -622,7 +632,17 @@ from tqdm.keras import TqdmCallback
 print('Starting model fitting')
 # TODO: Fix similarity predictor/similarity predictor loss? Getting big negative numbers when training on Google Colab
 # infoNCE loss giving zero for everything
-model.fit(topic_expan_generator, batch_size=batch_size, epochs=epochs, verbose=1, callbacks=[TqdmCallback(verbose=1)])
+
+checkpoint_filepath = './checkpoint.h5'
+model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+    filepath=checkpoint_filepath,
+    monitor='bilinear_accuracy',
+    save_weights_only=True,
+    save_freq=1000,
+    mode='max',
+    save_best_only=True)
+
+model.fit(topic_expan_generator, batch_size=batch_size, epochs=epochs, verbose=1, callbacks=[TqdmCallback(verbose=1), model_checkpoint_callback])
 
 # %%
 model.save('test.h5')
@@ -636,7 +656,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Input
 import tensorflow_ranking
 
-from spektral.layers import GCNConv, GlobalAvgPool, GraphMasking
+from spektral.layers import GCNConv, GlobalAvgPool, GraphMasking, GlobalSumPool, GlobalMaxPool
 
 # n_out = dataset.n_labels
 
