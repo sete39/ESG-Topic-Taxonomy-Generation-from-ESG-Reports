@@ -3,26 +3,26 @@ import json
 # import pandas as pd
 
 class Block:
-    def __init__(self, page_count: int, block_count: int, size: float, font: str, color: int,
-                  bbox: list[float], text: list[str], text_str: str) -> None:
+    def __init__(self, page_count: int, block_number: int, size: float, font: str, color: int,
+                  bbox: list[float], texts: list[str], text_str: str) -> None:
         self.page_count = page_count
-        self.block_count = block_count
+        self.block_number = block_number
         self.size = size
         self.font = font
         self.color = color
         self.bbox = bbox
-        self.text = text
+        self.texts = texts
         self.text_str = text_str
 
     def from_json(json_dict: dict):
         return Block(
             page_count=json_dict['page_count'],
-            block_count=json_dict['block_count'],
+            block_number=json_dict['block_number'],
             size=json_dict['size'],
             font=json_dict['font'],
             color=json_dict['color'],
             bbox=json_dict['bbox'],
-            text=json_dict['text'],
+            texts=json_dict['texts'],
             text_str=json_dict['text_str']
         )
     
