@@ -33,7 +33,7 @@ class TopicExpanTrainGen(tf.keras.utils.Sequence):
     # batch size must be a multiple of mini_batch_size
 
     # TODO: Shuffle the dataset on epoch end
-    def __init__(self, topic_graph_list: list, document_input: np.array, document_topics: np.array, batch_size: int, mini_batch_size: int, encoded_topic_to_tokenized_dict:dict):
+    def __init__(self, topic_graph_list: list, document_input: np.array, document_topics: np.array, document_terms: list, batch_size: int, mini_batch_size: int, encoded_topic_to_tokenized_dict: dict):
         if batch_size % mini_batch_size != 0:
             raise Exception('batch_size must be a multiple of mini_batch_size')
         if len(document_input) != len(document_topics):
@@ -42,6 +42,7 @@ class TopicExpanTrainGen(tf.keras.utils.Sequence):
         self.topic_graph_list = topic_graph_list
         self.document_input = document_input
         self.document_topics = document_topics
+        self.document_terms = document_terms
         self.batch_size = batch_size
         self.mini_batch_size = mini_batch_size
         self.encoded_topic_to_tokenized_dict = encoded_topic_to_tokenized_dict
@@ -90,7 +91,7 @@ class TopicExpanTrainGen(tf.keras.utils.Sequence):
 
             exclude_list = [positive_doc_topic]
             negative_documents = []
-            mini_batch_phrase_list = [self.encoded_topic_to_tokenized_dict[positive_doc_topic]] 
+            mini_batch_phrase_list = [self.document_terms[positive_doc_idx]] 
             for _ in range(self.mini_batch_size-1):
                 # creating mini_batch / getting random negative documents for the rest of the minibatch
                 random_negative_topic = np.random.choice(list(set([x for x in self.document_topics_dict.keys()]) - set(exclude_list)))
@@ -100,7 +101,7 @@ class TopicExpanTrainGen(tf.keras.utils.Sequence):
                 random_negative_document = self.document_input[random_negative_document_idx]
                 negative_documents.append(random_negative_document)
 
-                mini_batch_phrase_list.append(self.encoded_topic_to_tokenized_dict[random_negative_topic])
+                mini_batch_phrase_list.append(self.document_terms[random_negative_document_idx])
             
             # label for the similarirt prediction is 1 for the positive document (first element),
             # and zero for all negative documents
