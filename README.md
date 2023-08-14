@@ -5,6 +5,7 @@
  - **src/Reports.py**: class and functions used to read the JSONs and converts them into python classes to be used for pre-processing
  - **src/classify_esg.py**: Runs the FinBERT ESG classifier to classify all the documents extracted from the pre-processing step into either Environmental, Social, Governance, or None. This is the first level of our topic taxonomy (i.e. three top-level topics, Environmental, Social, and Governance)
  - **src/run_topic_taxonomy.py** : Main section of our code where the second and third level topics are found, topics are assigned the relevant topics, and the results (visualization and final taxonomy jsons) are generated.
+ - **previous_results**: results of my own run of the model, provided for ease of use and to see the results without running the code
  - **dataset**: The dataset folder is where the dataset needs to be placed (as described below) and where the results will be placed by our method. The results consists of three files inside the dataset folder:
 	 1.  An interactive visualization of the whole taxonomy (all three levels) is generated and saved into a file called "complete_taxonomy_visualization.html"
 	2. The taxonomy converted into a JSON, as well as the id of docs that have been assigned to that JSON, saved into a file called "topic_taxonomy.json"
@@ -34,7 +35,7 @@ From the dataset, that can be found [here](https://drive.google.com/drive/folder
 
 This will convert the report jsons into a list of documents, as well as classify all of them into either Environmental, Social, and Governance (first level of our taxonomy). This only needs to be run once as the results are saved into two files,  "./dataset/docs.pkl" and "./dataset/esg_classification.pkl," that will be used in the remained of our code as well.
 
-## Running Topic Taxonomy Generation Code 
+## Running code 
 Finally, we can run the final part of the code now. Run the following command to run the code that will generate the second-level and third-level topics.
 
 	python run_topic_taxonomy.py
