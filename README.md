@@ -1,3 +1,4 @@
+
 # Running the Project - Pre-processing Dataset and Running the Code
 
 ## Setting Up Environment
@@ -5,9 +6,9 @@ First, using Anaconda, set up a new environment called "topic_taxanomy" with the
 
 	conda create -n topic_taxonomy python==3.8
 	conda activate topic_taxonomy
+	conda install pandas
 	conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
 	conda install -c conda-forge bertopic
-	conda install -c huggingface transformers
 
 If the KCL HPC is being used, make sure you request a GPU as well as enough memory to run the code. A sample HPC GPU request can be seen below (this will open a new bash terminal with gpu access)
 
@@ -20,10 +21,10 @@ From the dataset, that can be found [here](https://drive.google.com/drive/folder
 	python preprocess.py
 	python classify_esg.py
 
-This will convert the report jsons into a list of documents, as well as classify all of them into either Environmental, Social, and Governance (first level of our taxonomy). This only needs to be run once as the results are saved into two files,  "./dataset/docs.pkl" and "./dataset/esg_classification.pkl," that will be used in our code as well.
+This will convert the report jsons into a list of documents, as well as classify all of them into either Environmental, Social, and Governance (first level of our taxonomy). This only needs to be run once as the results are saved into two files,  "./dataset/docs.pkl" and "./dataset/esg_classification.pkl," that will be used in the remained of our code as well.
 
 ## Running code 
-Finally, we can run the code now. Run the following command to run the code that will generate the second-level and third-level topics.
+Finally, we can run the final part of the code now. Run the following command to run the code that will generate the second-level and third-level topics.
 
 	python run_topic_taxonomy.py
 

@@ -1,3 +1,9 @@
+# I verify that I am the sole author of the programmes
+# contained in this archive, except where explicitly
+# stated to the contrary.
+# Name: Saif Majdi Salman Qasim AlNajjar
+# Date: 14/08/2023
+
 import pickle
 import pandas as pd
 from dataclasses import dataclass
@@ -160,7 +166,6 @@ def merge_redundant_topics(topic_model_lower, filtered_docs, n: int):
     to_merge = [(list(merge_set)[0], second_node) for merge_set in merge_sets_list for second_node in list(merge_set)[1:]]
     
     topic_model_lower.merge_topics(filtered_docs, to_merge)
-b
     
 def reduce_model_outliers(topic_model_lower, filtered_docs, filtered_embeddings):
     # minimizes number of outlier documents
@@ -307,7 +312,7 @@ def assign_to_topics(topic_model, docs, embeddings, n: int, method='positive_mea
     return topic_to_docs, doc_to_topics
 
 
-print('Assigning second-level topics to documents...')
+print('Assigning second-level and third-level topics to documents...')
 upper_topic_docs_list = []
 second_level_topic_docs_list = []
 for esg_topic_name in esg_topic_models:
@@ -330,8 +335,9 @@ for esg_topic_name in esg_topic_models:
     second_level_topic_docs_list.append(topic_docs_list)
     print('Finished ' + esg_topic_name)
     
-    
-print('Assigning third-level topics to documents...')
+
+print('Creating dataframe with assigned topics...')
+
 from copy import deepcopy
 doc_to_topics_dict = {}
 
@@ -347,7 +353,6 @@ for i, upper_topic_docs in enumerate(upper_topic_docs_list):
             [doc_to_topics_dict[esg_key]['l3_topics'][doc_number].append(key_to_topic[(i, topic_number, third_level_topic_number)]) for third_level_topic_number in third_level_topics if third_level_topic_number != -1]
             
 
-print('Creating dataframe with assigned topics...')
 for esg_key in esg_topic_models.keys():
     l2_topics = [[both_topics[1] for both_topics in doc_topics] for doc_topics in doc_to_topics_dict[esg_key]['l2_topics']]
     l3_topics = [[both_topics[2] for both_topics in doc_topics] for doc_topics in doc_to_topics_dict[esg_key]['l3_topics']]
