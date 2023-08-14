@@ -27,5 +27,5 @@ nlp = pipeline("text-classification", model=finbert, tokenizer=tokenizer, trunca
 for out in tqdm(nlp(dataset, batch_size=128), total=len(dataset)):
     results.append(out)
     
-with open('esg_classification.pkl', 'wb') as handle:
+with open('../dataset/esg_classification.pkl', 'wb') as handle:
     pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)

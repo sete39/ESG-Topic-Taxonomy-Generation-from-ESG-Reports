@@ -81,7 +81,7 @@ def read_normalized_file(normalized_filename: str) -> list[Page]:
     # NOTE: each file represents an ESG report, and each line represents a page. 
     # In a page, each dict represents a block, which could be a text block or an image block.
     # The images are all deleted. Each block tells the size, font, and location, of a text.
-    with open(f'/scratch/users/k21148846/normalization_text/{normalized_filename}.jsonl', encoding="utf8") as json_file:
+    with open(f'../datase/normalization_text/{normalized_filename}.jsonl', encoding="utf8") as json_file:
         json_list = list(json_file)
 
     page_list: list[Page] = []

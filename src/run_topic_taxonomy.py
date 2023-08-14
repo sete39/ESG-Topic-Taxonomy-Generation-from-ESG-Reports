@@ -5,12 +5,11 @@ from bertopic._bertopic import BERTopic
 from numpy.typing import NDArray
 from typing import List
 from sklearn.feature_extraction.text import CountVectorizer
-from bertopic.representation import KeyBERTInspired, TextGeneration, MaximalMarginalRelevance
+from bertopic.representation import KeyBERTInspired, MaximalMarginalRelevance
 from umap import UMAP
 from sentence_transformers import SentenceTransformer
 from bertopic import BERTopic 
 from sklearn.cluster import MiniBatchKMeans
-from bertopic.representation import PartOfSpeech
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
@@ -508,5 +507,5 @@ import json
 with open("../dataset/topic_taxonomy_docs.json", "w") as outfile:
     json.dump(x, outfile)
     
-with open("../dataset/taxonomy_with_docs.json", "w") as outfile:
+with open("../dataset/topic_taxonomy.json", "w") as outfile:
     json.dump(restructured_taxonomy_dict, outfile)
