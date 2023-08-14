@@ -464,9 +464,9 @@ data=[trace1, trace2]
 fig=Figure(data=data, layout=layout)
 fig.update_yaxes(autorange='reversed')
 
-plotly.offline.plot(fig, filename='./complete_taxonomy_visualization.html')
+plotly.offline.plot(fig, filename='../dataset/complete_taxonomy_visualization.html')
 
-print('Visualization created at ./complete_taxonomy_visualization.html')
+print('Visualization created at ../dataset/complete_taxonomy_visualization.html')
 
 # creating taxonomy and docs jsons
 def find_all_docs_with_topic(df: pd.DataFrame, l2_topic: List = None, l3_topic: List = None):
