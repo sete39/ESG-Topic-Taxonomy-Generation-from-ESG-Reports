@@ -1,108 +1,61 @@
-# classes to convert JSONLs to Python classes
-import json
-from typing import List
-# import pandas as pd
+import pandas as pd
+import Reports
+import re
+from math import ceil
+from copy import deepcopy
+import pickle
 
-class Block:
-    def __init__(self, page_count: int, block_number: int, size: float, font: str, color: int,
-                  bbox: List[float], texts: List[str], text_str: str) -> None:
-        self.page_count = page_count
-        self.block_number = block_number
-        self.size = size
-        self.font = font
-        self.color = color
-        self.bbox = bbox
-        self.texts = texts
-        self.text_str = text_str
+print('Reading files...')
+report_list = Reports.get_all_reports('../dataset/report_summary_extracted_data.jsonl')
 
-    def from_json(json_dict: dict):
-        return Block(
-            page_count=json_dict['page_count'],
-            block_number=json_dict['block_number'],
-            size=json_dict['size'],
-            font=json_dict['font'],
-            color=json_dict['color'],
-            bbox=json_dict['bbox'],
-            texts=json_dict['texts'],
-            text_str=json_dict['text_str']
-        )
+print('Splitting into paragraphs...')
+paragraph_list = []
+paragraph_info_list = []
+for report in report_list:
+    for page in report.pages_list:
+        sentence_list = []
+        for block in page.block_list:
+            # use text_str
+            # remove all numbers
+            # ignore if no full stop or comma
+            # split by full stop
+            # filtered_text = re.sub(r'\d+', '', block.text_str)
+            sentence_list.append(block.text_str.strip())
+        
+        paragraph = ' '.join(sentence_list)
+        paragraph_length = len(paragraph.split())
+        if paragraph_length < 20:
+            continue
+        paragraph_list.append(paragraph)
+        paragraph_info_list.append((page.block_list[0].page_count, report.url))
+        
+
+MAX_SENTENCE_LENGTH = 256
+print('Splitting long paragraphs into max length of ', MAX_SENTENCE_LENGTH)
+indices_to_pop = []
+for i, p in enumerate(deepcopy(paragraph_list)):
+    paragraph = p.split()
+    length = len(paragraph)
+    if i % 100000 == 0:
+        print(i, len(paragraph_list))
+    if length <= MAX_SENTENCE_LENGTH:
+        continue
     
-class Page:
-    def __init__(self, page_count: int, block_list: List[Block]) -> None:
-        self.page_count = page_count
-        self.block_list = block_list # the combined block list make up a page
-
-    def from_json(json_list: List[dict]):
-        block_list = []
-        page_count = 0
-        for block_dict in json_list:
-            block = Block.from_json(block_dict)
-            block_list.append(block)
+    n_splits = ceil(length/MAX_SENTENCE_LENGTH)
+    split_paragraphs = [' '.join(paragraph[s*MAX_SENTENCE_LENGTH:(s*MAX_SENTENCE_LENGTH)+MAX_SENTENCE_LENGTH]) for s in range(n_splits)]
+    split_paragraph_infos = [paragraph_info_list[i] for _ in range(n_splits)]
         
-        return Page(page_count, block_list)
-
-class Report:
-    def __init__(self, pages_list: List[Page], company_name: str, industry: str, sector: str, 
-                 company_introduction: str, ticker: str, exchange: str, title: str, 
-                 date: str, author: str, keywords: str, url: str) -> None:
-        self.pages_list = pages_list # combined pages list make up a report
-        self.company_name = company_name
-        self.industry = industry
-        self.sector = sector 
-        self.company_introduction = company_introduction # short intro of company
-        self.ticker = ticker # company ticker symbol
-        self.exchange = exchange # exchange the company is listed in
-        self.title = title
-        self.date = date # just the year
-        self.author = author
-        self.keywords = keywords
-        self.url = url
-        
-    def from_summary(summary_dict: dict, report_dict: dict):
-        # summary_dict is the whole summary of a company
-        # report_dict is one report from a company's summary
-        pages_list = read_normalized_file(report_dict['to_name'])
-        return Report(
-            pages_list=pages_list,
-            company_name=summary_dict['company_name'],
-            industry=summary_dict['industry'],
-            sector=summary_dict['sector'],
-            company_introduction=summary_dict['company_introduction'],
-            ticker=summary_dict['ticker'],
-            exchange=summary_dict['exchange'],
-            title=report_dict['title'] or report_dict['metadata']['title'],
-            date=report_dict['date'],
-            author=report_dict['metadata']['author'],
-            keywords=report_dict['metadata']['keywords'],
-            url=report_dict['url']
-        )
-
-# reading a JSONL file and converting it to a page list
-def read_normalized_file(normalized_filename: str) -> List[Page]:
-    # NOTE: each file represents an ESG report, and each line represents a page. 
-    # In a page, each dict represents a block, which could be a text block or an image block.
-    # The images are all deleted. Each block tells the size, font, and location, of a text.
-    with open(f'../dataset/normalization_text/{normalized_filename}.jsonl', encoding="utf8") as json_file:
-        json_list = list(json_file)
-
-    page_list: List[Page] = []
-    for json_str in json_list:
-        page_dict = json.loads(json_str)
-        page = Page.from_json(page_dict)
-        page_list.append(page)
+    indices_to_pop.append(i)
     
-    return page_list
+    paragraph_list.extend(split_paragraphs)
+    paragraph_info_list.extend(split_paragraph_infos)
+# need to reverse first so indices dont get messed up in the original array
+for i in indices_to_pop[::-1]:
+    paragraph_list.pop(i)
+    paragraph_info_list.pop(i)
 
-def get_all_reports(file_name: str) -> List[Report]:
-        # creating the list of Reports using the summary JSONL and reading all normalized files
-        with open(file_name, encoding="utf8") as json_file:
-            summary_json_list = list(json_file)
+print('Final length: ', len(paragraph_list))
 
-        report_list = []
-        for summary_json_str in summary_json_list:
-            summary_dict = json.loads(summary_json_str)
-            for report_dict in summary_dict['reports']:
-                report = Report.from_summary(summary_dict, report_dict)
-                report_list.append(report)
-        
-        return report_list
+print('Saving...')
+with open('../dataset/docs.pkl', 'wb') as handle:
+    pickle.dump((paragraph_list, paragraph_info_list), handle, protocol=pickle.HIGHEST_PROTOCOL)

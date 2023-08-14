@@ -1,10 +1,11 @@
 # classes to convert JSONLs to Python classes
 import json
+from typing import List
 # import pandas as pd
 
 class Block:
     def __init__(self, page_count: int, block_number: int, size: float, font: str, color: int,
-                  bbox: list[float], texts: list[str], text_str: str) -> None:
+                  bbox: List[float], texts: List[str], text_str: str) -> None:
         self.page_count = page_count
         self.block_number = block_number
         self.size = size
@@ -27,11 +28,11 @@ class Block:
         )
     
 class Page:
-    def __init__(self, page_count: int, block_list: list[Block]) -> None:
+    def __init__(self, page_count: int, block_list: List[Block]) -> None:
         self.page_count = page_count
         self.block_list = block_list # the combined block list make up a page
 
-    def from_json(json_list: list[dict]):
+    def from_json(json_list: List[dict]):
         block_list = []
         page_count = 0
         for block_dict in json_list:
@@ -41,7 +42,7 @@ class Page:
         return Page(page_count, block_list)
 
 class Report:
-    def __init__(self, pages_list: list[Page], company_name: str, industry: str, sector: str, 
+    def __init__(self, pages_list: List[Page], company_name: str, industry: str, sector: str, 
                  company_introduction: str, ticker: str, exchange: str, title: str, 
                  date: str, author: str, keywords: str, url: str) -> None:
         self.pages_list = pages_list # combined pages list make up a report
@@ -77,14 +78,14 @@ class Report:
         )
 
 # reading a JSONL file and converting it to a page list
-def read_normalized_file(normalized_filename: str) -> list[Page]:
+def read_normalized_file(normalized_filename: str) -> List[Page]:
     # NOTE: each file represents an ESG report, and each line represents a page. 
     # In a page, each dict represents a block, which could be a text block or an image block.
     # The images are all deleted. Each block tells the size, font, and location, of a text.
-    with open(f'../datase/normalization_text/{normalized_filename}.jsonl', encoding="utf8") as json_file:
+    with open(f'../dataset/normalization_text/{normalized_filename}.jsonl', encoding="utf8") as json_file:
         json_list = list(json_file)
 
-    page_list: list[Page] = []
+    page_list: List[Page] = []
     for json_str in json_list:
         page_dict = json.loads(json_str)
         page = Page.from_json(page_dict)
@@ -92,7 +93,7 @@ def read_normalized_file(normalized_filename: str) -> list[Page]:
     
     return page_list
 
-def get_all_reports(file_name: str) -> list[Report]:
+def get_all_reports(file_name: str) -> List[Report]:
         # creating the list of Reports using the summary JSONL and reading all normalized files
         with open(file_name, encoding="utf8") as json_file:
             summary_json_list = list(json_file)
